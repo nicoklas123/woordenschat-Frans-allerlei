@@ -67,8 +67,6 @@
         .selection-card.selected { border-color: var(--secondary); background: rgba(0, 206, 201, 0.1); }
         .selection-card img { width: 60px; height: 60px; background: white; border-radius: 10px; padding: 5px; margin-bottom: 8px; }
 
-        .hint-text { color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-top: 10px; text-align: center; font-style: italic; }
-
         #game-area { width: 100%; display: none; }
         .arasaac-img { width: 120px; height: 120px; background: white; padding: 10px; border-radius: 15px; margin: 0 auto 1rem; display: block; }
         .fr-display { font-size: 2.2rem; font-weight: 700; color: var(--secondary); text-align: center; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -142,13 +140,11 @@
 <main id="main-stage">
     <div id="selection-screen">
         <h2 style="text-align:center; margin-bottom: 15px;">Kies de woorden</h2>
-        <div id="loading-msg" style="text-align:center; margin: 20px;">Laden...</div>
         <div class="selection-grid" id="sel-grid"></div>
         <div style="display:flex; gap:10px; justify-content:center;">
             <button onclick="toggleAll(true)">Alles</button>
             <button onclick="toggleAll(false)">Niets</button>
         </div>
-        <p class="hint-text">Duid minstens 4 woorden aan om te kunnen starten.</p>
         <div style="text-align:center; margin-top:20px">
             <button id="btn-start-games" onclick="startGameSession()" style="background:var(--success); color:white; width:80%;" disabled>Start</button>
         </div>
@@ -163,38 +159,29 @@
 
 <script>
 const rawVocab = [
-    { nl: "ja", fr: "oui" },
-    { nl: "nee", fr: "non" },
-    { nl: "hallo / goedendag", fr: "bonjour" },
-    { nl: "hoi", fr: "salut" },
-    { nl: "bedankt", fr: "merci" },
-    { nl: "alstublieft", fr: "s'il vous plaît" },
-    { nl: "hoe gaat het?", fr: "ça va ?" },
-    { nl: "goed", fr: "bien" },
-    { nl: "tot ziens", fr: "au revoir" },
-    { nl: "excuses", fr: "pardon" }
+    { nl: "ja", fr: "oui", id: "34521" },
+    { nl: "nee", fr: "non", id: "31859" },
+    { nl: "tot ziens", fr: "au revoir", id: "5896" },
+    { nl: "goedendag", fr: "bonjour", id: "6009" },
+    { nl: "hallo", fr: "salut", id: "34567" },
+    { nl: "goed", fr: "bien", id: "5397" },
+    { nl: "dank u", fr: "merci", id: "36093" },
+    { nl: "alstublieft", fr: "s'il vous plaît", id: "38907" },
+    { nl: "excuses", fr: "pardon", id: "38360" },
+    { nl: "hoe gaat het?", fr: "ça va ?", id: "37609" },
+    { nl: "oké", fr: "d'accord", id: "31410" }
 ];
-
-const positiveFeedbacks = ["Goed zo! 🌟", "Knap gedaan! 🏆", "Fantastisch! ✨", "Schitterend! 🔥", "Top gewerkt! 💪"];
 
 let fullData = [], activeData = [], modeQueue = [], testData = [];
 let mode = 'list', testIndex = 0, testScore = 0, testActive = false;
-let selectedDragItem = null; 
-let activeTimer = null;
+let selectedDragItem = null, activeTimer = null;
 
-async function init() {
-    const promises = rawVocab.map(async (item) => {
-        try {
-            // Zoekterm opschonen voor API (verwijder vraagtekens)
-            const searchTerm = item.fr.replace(/\?/g, "").trim();
-            const res = await fetch(`https://api.arasaac.org/api/pictograms/fr/search/${searchTerm}`);
-            const json = await res.json();
-            const id = json[0]?._id;
-            return { ...item, img: `https://static.arasaac.org/pictograms/${id}/${id}_300.png`, selected: false };
-        } catch (e) { return { ...item, img: "", selected: false }; }
-    });
-    fullData = await Promise.all(promises);
-    document.getElementById('loading-msg').style.display = 'none';
+function init() {
+    fullData = rawVocab.map(item => ({
+        ...item,
+        img: `https://static.arasaac.org/pictograms/${item.id}/${item.id}_300.png`,
+        selected: false
+    }));
     renderSelectionGrid();
 }
 
@@ -228,8 +215,7 @@ function toggleAll(status) {
 
 function checkSelectionCount() {
     activeData = fullData.filter(item => item.selected);
-    const btn = document.getElementById('btn-start-games');
-    btn.disabled = activeData.length < 4;
+    document.getElementById('btn-start-games').disabled = activeData.length < 4;
 }
 
 function startGameSession() {
@@ -241,15 +227,8 @@ function startGameSession() {
 
 function goToSelection() { location.reload(); }
 
-function clearTimers() {
-    if(activeTimer) {
-        clearTimeout(activeTimer);
-        activeTimer = null;
-    }
-}
-
 function changeMode(m) {
-    clearTimers();
+    if(activeTimer) clearTimeout(activeTimer);
     testActive = false; mode = m; modeQueue = [];
     document.getElementById('score-counter').style.display = 'none';
     document.getElementById('feedback').innerText = "";
@@ -270,44 +249,29 @@ function renderGame(testItem = null) {
     document.getElementById('feedback').innerText = ""; 
 
     if (mode === 'list') {
-        area.innerHTML = `
-            <div class="vocab-list">
-                ${activeData.map(i => `
-                    <div class="vocab-row">
-                        <img src="${i.img}">
-                        <div style="flex:1"><b>${i.fr}</b><br><small>${i.nl}</small></div>
-                        <button class="speaker-btn" onclick="speak('${i.fr.replace(/'/g, "\\'")}')">🔊</button>
-                    </div>
-                `).join('')}
-            </div>`;
+        area.innerHTML = `<div class="vocab-list">${activeData.map(i => `
+            <div class="vocab-row">
+                <img src="${i.img}">
+                <div style="flex:1"><b>${i.fr}</b><br><small>${i.nl}</small></div>
+                <button class="speaker-btn" onclick="speak('${i.fr.replace(/'/g, "\\'")}')">🔊</button>
+            </div>`).join('')}</div>`;
     }
     else if (mode === 'listen' || mode === 'copy') {
         const isCopyMode = mode === 'copy';
         area.innerHTML = `<div style="text-align:center">
             <div class="fr-display">${item.fr} <button class="speaker-btn" onclick="speak('${item.fr.replace(/'/g, "\\'")}')">🔊</button></div>
             <img src="${item.img}" class="arasaac-img">
-            ${isCopyMode ? `
-                <input type="text" id="ipt" placeholder="Typ het na..." autocomplete="off" autocapitalize="none">
-                <button onclick="checkCopy('${item.fr.replace(/'/g, "\\'")}')" style="width:100%">Controleer</button>
-            ` : `
-                <h3>${item.nl}</h3>
-                <button onclick="renderGame()" style="margin-top:20px; width:100%">Volgende</button>
-            `}
-        </div>`;
+            ${isCopyMode ? `<input type="text" id="ipt" placeholder="Typ het na..." autocomplete="off"><button onclick="checkCopy('${item.fr.replace(/'/g, "\\'")}')" style="width:100%">Controleer</button>` : 
+            `<h3>${item.nl}</h3><button onclick="renderGame()" style="margin-top:20px; width:100%">Volgende</button>`}</div>`;
         speak(item.fr);
-        if(isCopyMode) {
-            const ipt = document.getElementById('ipt');
-            ipt.focus();
-            ipt.onkeydown = (e) => { if(e.key==='Enter') { ipt.blur(); checkCopy(item.fr); }};
-        }
+        if(isCopyMode) { const ipt = document.getElementById('ipt'); ipt.focus(); ipt.onkeydown = (e) => { if(e.key==='Enter') checkCopy(item.fr); }};
     } 
     else if (mode === 'translate') {
         const options = [...activeData.filter(d => d.nl !== item.nl).sort(() => 0.5 - Math.random()).slice(0, 3), item].sort(() => 0.5 - Math.random());
         area.innerHTML = `<div style="text-align:center">
             <div class="fr-display">${item.fr} <button class="speaker-btn" onclick="speak('${item.fr.replace(/'/g, "\\'")}')">🔊</button></div>
             <img src="${item.img}" class="arasaac-img" style="${testActive ? 'display:none' : ''}">
-            <div class="option-grid">${options.map(s => `<button onclick="checkTrans('${s.nl.replace(/'/g, "\\'")}', '${item.nl.replace(/'/g, "\\'")}')">${s.nl}</button>`).join('')}</div>
-        </div>`;
+            <div class="option-grid">${options.map(s => `<button onclick="checkTrans('${s.nl.replace(/'/g, "\\'")}', '${item.nl.replace(/'/g, "\\'")}')">${s.nl}</button>`).join('')}</div></div>`;
         speak(item.fr);
     }
     else if (mode === 'drag') { renderDragArea(4); }
@@ -316,96 +280,48 @@ function renderGame(testItem = null) {
 
 function renderDragArea(count) {
     const area = document.getElementById('game-area');
-    const subsetCount = Math.min(count, activeData.length);
-    const subset = [...activeData].sort(() => 0.5 - Math.random()).slice(0, subsetCount);
+    const subset = [...activeData].sort(() => 0.5 - Math.random()).slice(0, Math.min(count, activeData.length));
     const shuffledTargets = [...subset].sort(() => 0.5 - Math.random());
     let matchesMade = 0;
-    let testResults = [];
 
-    area.innerHTML = `<h3 style="text-align:center; margin-bottom:20px;">Verbind</h3>
-        <div id="drags" style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;"></div>
-        <div id="drops" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;"></div>`;
+    area.innerHTML = `<h3 style="text-align:center; margin-bottom:20px;">Verbind</h3><div id="drags" style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;"></div><div id="drops" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;"></div>`;
     
     subset.forEach((i, idx) => {
         const img = document.createElement('img');
         img.src = i.img; img.className = 'drag-img'; img.id = `drag-item-${idx}`;
-        img.onclick = () => {
-            document.querySelectorAll('.drag-img').forEach(el => el.classList.remove('selected-for-drop'));
-            img.classList.add('selected-for-drop');
-            selectedDragItem = { data: i, elId: img.id };
-        };
+        img.onclick = () => { document.querySelectorAll('.drag-img').forEach(el => el.classList.remove('selected-for-drop')); img.classList.add('selected-for-drop'); selectedDragItem = { data: i, elId: img.id }; };
         document.getElementById('drags').appendChild(img);
     });
 
     shuffledTargets.forEach(target => {
-        const dz = document.createElement('div');
-        dz.className = 'drop-zone';
-        dz.innerHTML = `<b>${target.fr}</b>`;
+        const dz = document.createElement('div'); dz.className = 'drop-zone'; dz.innerHTML = `<b>${target.fr}</b>`;
         dz.onclick = () => {
             if(!selectedDragItem) return;
-            const source = selectedDragItem;
-            
-            if(testActive) {
-                dz.innerHTML = `<img src="${source.data.img}" style="width:60px">`;
-                dz.classList.add('filled');
-                testResults.push({ zone: dz, isCorrect: source.data.fr === target.fr });
-                document.getElementById(source.elId).style.visibility = 'hidden';
-                selectedDragItem = null;
-                matchesMade++;
-                
-                if(matchesMade === subsetCount) {
-                    testResults.forEach(res => {
-                        if(res.isCorrect) { res.zone.classList.add('correct'); testScore++; }
-                        else { res.zone.classList.add('wrong'); }
-                    });
-                    activeTimer = setTimeout(() => { nextTest(); }, 2500);
-                }
-            } else {
-                if(source.data.fr === target.fr) {
-                    dz.innerHTML = `<img src="${source.data.img}" style="width:60px">`;
-                    dz.classList.add('correct');
-                    speak(target.fr);
-                    document.getElementById(source.elId).style.visibility = 'hidden';
-                    selectedDragItem = null;
-                    matchesMade++;
-                    if(matchesMade === subsetCount) activeTimer = setTimeout(() => feedback(true), 1500);
-                } else {
-                    dz.classList.add('wrong');
-                    setTimeout(() => dz.classList.remove('wrong'), 500);
-                    document.getElementById(source.elId).classList.remove('selected-for-drop');
-                    selectedDragItem = null;
-                }
-            }
+            if(selectedDragItem.data.fr === target.fr) {
+                dz.innerHTML = `<img src="${selectedDragItem.data.img}" style="width:60px">`; dz.classList.add('correct'); speak(target.fr);
+                document.getElementById(selectedDragItem.elId).style.visibility = 'hidden'; selectedDragItem = null; matchesMade++;
+                if(matchesMade === subset.length) activeTimer = setTimeout(() => { if(testActive) { testScore += 4; nextTest(); } else renderGame(); }, 1500);
+            } else { dz.classList.add('wrong'); setTimeout(() => dz.classList.remove('wrong'), 500); }
         };
         document.getElementById('drops').appendChild(dz);
     });
 }
 
 function startMem(pairs) {
-    const area = document.getElementById('game-area');
-    area.innerHTML = `<div class="grid-mem" id="m-grid"></div>`;
+    const area = document.getElementById('game-area'); area.innerHTML = `<div class="grid-mem" id="m-grid"></div>`;
     const pairCount = Math.min(pairs, activeData.length);
     const subset = [...activeData].sort(() => 0.5 - Math.random()).slice(0, pairCount);
-    let deck = [];
-    subset.forEach(i => { deck.push({...i, type:'img'}); deck.push({...i, type:'txt'}); });
+    let deck = []; subset.forEach(i => { deck.push({...i, type:'img'}); deck.push({...i, type:'txt'}); });
     deck.sort(() => 0.5 - Math.random());
-    
     let flipped = [], matches = 0;
     deck.forEach(card => {
-        const el = document.createElement('div'); el.className = 'card';
-        el.innerHTML = `<div class="card-inner"><div class="face front">?</div><div class="face back">${card.type==='img'?`<img src="${card.img}">`:`<span>${card.fr}</span>`}</div></div>`;
+        const el = document.createElement('div'); el.className = 'card'; el.innerHTML = `<div class="card-inner"><div class="face front">?</div><div class="face back">${card.type==='img'?`<img src="${card.img}">`:`<span>${card.fr}</span>`}</div></div>`;
         el.onclick = () => {
             if(el.classList.contains('flipped') || flipped.length === 2) return;
-            el.classList.add('flipped');
-            speak(card.fr);
-            flipped.push({el, data:card});
+            el.classList.add('flipped'); flipped.push({el, data:card});
             if(flipped.length === 2) {
-                if(flipped[0].data.fr === flipped[1].data.fr) {
-                    matches++; flipped = [];
-                    if(matches === pairCount) activeTimer = setTimeout(() => renderGame(), 1500);
-                } else {
-                    activeTimer = setTimeout(() => { flipped.forEach(c=>c.el.classList.remove('flipped')); flipped=[]; }, 1000);
-                }
+                if(flipped[0].data.fr === flipped[1].data.fr) { matches++; flipped = []; if(matches === pairCount) activeTimer = setTimeout(() => renderGame(), 1500); }
+                else { setTimeout(() => { flipped.forEach(c=>c.el.classList.remove('flipped')); flipped=[]; }, 1000); }
             }
         };
         document.getElementById('m-grid').appendChild(el);
@@ -427,65 +343,23 @@ function checkTrans(val, goal) {
 
 function feedback(correct, goal) {
     const f = document.getElementById('feedback');
-    if(correct) {
-        f.innerText = positiveFeedbacks[Math.floor(Math.random() * positiveFeedbacks.length)];
-        f.style.color = "var(--success)";
-    } else {
-        f.innerText = `Foutje! Het was: ${goal}`;
-        f.style.color = "var(--danger)";
-    }
-    activeTimer = setTimeout(() => { 
-        if(testActive) nextTest(); 
-        else renderGame(); 
-    }, 1500);
+    f.innerText = correct ? "Goed zo! 🌟" : `Foutje! Het was: ${goal}`;
+    f.style.color = correct ? "var(--success)" : "var(--danger)";
+    activeTimer = setTimeout(() => { if(testActive) nextTest(); else renderGame(); }, 1500);
 }
 
-function startTest() {
-    clearTimers();
-    testActive = true; testIndex = 0; testScore = 0;
-    testData = [...activeData].sort(() => 0.5 - Math.random());
-    document.querySelectorAll('#app-nav button').forEach(b => b.classList.remove('active'));
-    document.getElementById('nav-test').classList.add('active');
-    document.getElementById('score-counter').style.display = 'block';
-    document.getElementById('feedback').innerText = ""; 
-    nextTest();
-}
+function startTest() { testActive = true; testIndex = 0; testScore = 0; testData = [...activeData].sort(() => 0.5 - Math.random()); document.getElementById('score-counter').style.display = 'block'; nextTest(); }
 
 function nextTest() {
-    clearTimers();
     if(testIndex >= 7) { showResult(); return; }
-    document.getElementById('feedback').innerText = ""; 
-    document.getElementById('score-counter').innerText = `Vraag ${Math.min(testIndex + 1, 7)} / 7`;
-    
-    if(testIndex < 2) { 
-        mode = 'copy';
-        renderGame(testData[testIndex % testData.length]);
-    } else if (testIndex < 6) { 
-        mode = 'translate';
-        renderGame(testData[testIndex % testData.length]);
-    } else { 
-        mode = 'drag';
-        renderDragArea(4);
-        testIndex = 6; 
-    }
+    document.getElementById('score-counter').innerText = `Vraag ${testIndex + 1} / 7`;
+    if(testIndex < 2) mode = 'copy'; else if (testIndex < 6) mode = 'translate'; else mode = 'drag';
+    renderGame(testData[testIndex % testData.length]);
     testIndex++;
 }
 
 function showResult() {
-    document.getElementById('score-counter').style.display = 'none';
-    document.getElementById('feedback').innerText = "";
-    
-    let endMsg = "Nog even oefenen!";
-    if(testScore >= 10) endMsg = "Perfect! Je bent een expert! 🥇";
-    else if(testScore >= 8) endMsg = "Schitterend gedaan! 🌟";
-    else if(testScore >= 5) endMsg = "Goed gewerkt, ga zo door! 👍";
-
-    document.getElementById('game-area').innerHTML = `
-        <div style="text-align:center">
-            <h2 style="margin-bottom:20px">Toets voltooid</h2>
-            <div style="font-size:5rem; font-weight:bold; color:var(--warning); margin:20px 0;">${testScore} / 10</div>
-            <p style="font-size:1.2rem">${endMsg}</p>
-        </div>`;
+    document.getElementById('game-area').innerHTML = `<div style="text-align:center"><h2>Toets voltooid</h2><div style="font-size:5rem; font-weight:bold; color:var(--warning); margin:20px 0;">${testScore}</div><button onclick="goToSelection()" style="width:100%">Klaar</button></div>`;
 }
 
 init();
