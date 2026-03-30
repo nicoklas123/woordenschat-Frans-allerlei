@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mots courants - Veelgebruikte woorden</title>
+    <style>
+        :root {
+            --primary: #6C5CE7;
+            --secondary: #00CEC9;
+            --success: #00B894;
+            --danger: #D63031;
+            --warning: #FDCB6E;
+            --background: #0F172A;
+            --surface: rgba(255, 255, 255, 0.07);
+            --text: #FFFFFF;
+            --font-main: 'Poppins', sans-serif;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--background);
+            background-image: radial-gradient(at 10% 10%, rgba(108, 92, 231, 0.2) 0px, transparent 50%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
+            overflow-x: hidden;
+        }
+
+        header { width: 100%; padding: 1rem; text-align: center; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        
+        #app-nav { margin: 1rem; display: none; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+        button {
+            padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1); background: var(--surface); color: #CBD5E1;
+            transition: 0.2s; font-family: inherit; font-size: 1rem;
+            min-height: 48px;
+        }
+        button:active { transform: scale(0.98); background: rgba(255,255,255,0.2); }
+        button.active { background: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        #score-counter {
+            background: var(--warning); color: #000; padding: 5px 15px; border-radius: 20px;
+            font-weight: 700; margin-bottom: 10px; display: none;
+        }
+
+        #main-stage {
+            width: 95%; max-width: 850px; background: var(--surface);
+            border-radius: 24px; padding: 1.5rem; min-height: 450px; position: relative;
+            border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        #selection-screen { width: 100%; }
+        .selection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 15px 0; }
+        .selection-card { 
+            background: rgba(255,255,255,0.05); border-radius: 15px; padding: 12px; text-align: center;
+            border: 2px solid transparent; transition: 0.3s; cursor: pointer; position: relative;
+        }
+        .selection-card.selected { border-color: var(--secondary); background: rgba(0, 206, 201, 0.1); }
+        .selection-card img { width: 60px; height: 60px; background: white; border-radius: 10px; padding: 5px; margin-bottom: 8px; }
+
+        .hint-text { color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-top: 10px; text-align: center; font-style: italic; }
+
+        #game-area { width: 100%; display: none; }
+        .arasaac-img { width: 120px; height: 120px; background: white; padding: 10px; border-radius: 15px; margin: 0 auto 1rem; display: block; }
+        .fr-display { font-size: 2.2rem; font-weight: 700; color: var(--secondary); text-align: center; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        
+        input[type="text"] {
+            width: 100%; max-width: 350px; padding: 15px; border-radius: 12px;
+            background: #FFFFFF !important; color: #000000 !important; 
+            font-size: 1.2rem; font-weight: 600; text-align: center; 
+            display: block; margin: 0 auto 1rem; border: 3px solid var(--primary); outline: none;
+        }
+
+        .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 1rem auto; }
+        .grid-mem { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px auto; width: 100%; }
+        
+        .card { height: 100px; perspective: 1000px; }
+        .card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: 0.5s; border-radius: 10px; }
+        .flipped .card-inner { transform: rotateY(180deg); }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; border-radius: 10px; padding: 5px; }
+        .front { background: var(--primary); color: white; font-size: 1.5rem; }
+        .back { background: white; color: #0F172A; transform: rotateY(180deg); text-align: center; font-size: 0.8rem; font-weight: 600; border: 2px solid var(--primary); }
+        .back img { max-width: 90%; max-height: 90%; object-fit: contain; }
+
+        .drop-zone { 
+            width: 130px; min-height: 110px; border: 2px dashed rgba(255,255,255,0.3); 
+            border-radius: 15px; display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; background: rgba(0,0,0,0.2); padding: 5px; transition: 0.3s;
+            font-size: 1rem; text-align: center;
+        }
+        .drag-img { 
+            width: 70px; height: 70px; background: white; border-radius: 10px; 
+            cursor: pointer; padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 3px solid transparent; transition: transform 0.2s;
+        }
+        .drag-img.selected-for-drop { border-color: var(--secondary); transform: scale(1.1); }
+        .drop-zone.correct { border: 3px solid var(--success) !important; background: rgba(0, 184, 148, 0.1); }
+        .drop-zone.wrong { border: 3px solid var(--danger) !important; background: rgba(214, 48, 49, 0.1); }
+        .drop-zone.filled { border-style: solid; border-color: var(--primary); }
+
+        .speaker-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--secondary); padding: 8px; }
+        
+        #feedback { text-align: center; font-weight: 700; font-size: 1.2rem; margin-top: 1rem; min-height: 1.5em; }
+
+        .vocab-list { width: 100%; display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .vocab-row { display: flex; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; gap: 15px; }
+        .vocab-row img { width: 50px; height: 50px; background: white; border-radius: 8px; }
+
+        footer { margin-top: auto; padding: 1.5rem; font-size: 0.8rem; color: rgba(255,255,255,0.4); text-align: center; width: 100%; }
+
+        @media (max-width: 600px) {
+            .fr-display { font-size: 1.8rem; }
+            .selection-grid { grid-template-columns: 1fr 1fr; }
+            .option-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header><h1>Mots courants - Veelgebruikte woorden</h1></header>
+
+<nav id="app-nav">
+    <button onclick="changeMode('list')" id="nav-list">Lijst</button>
+    <button onclick="changeMode('listen')" id="nav-listen">Luister</button>
+    <button onclick="changeMode('copy')" id="nav-copy">Schrijf</button>
+    <button onclick="changeMode('translate')" id="nav-translate">Vertaal</button>
+    <button onclick="changeMode('memory')" id="nav-memory">Memory</button>
+    <button onclick="changeMode('drag')" id="nav-drag">Verbind</button>
+    <button onclick="startTest()" id="nav-test" style="color:var(--warning)">Toets</button>
+    <button onclick="goToSelection()" style="background:var(--danger); color:white">❌</button>
+</nav>
+
+<main id="main-stage">
+    <div id="selection-screen">
+        <h2 style="text-align:center; margin-bottom: 15px;">Kies de woorden</h2>
+        <div id="loading-msg" style="text-align:center; margin: 20px;">Laden...</div>
+        <div class="selection-grid" id="sel-grid"></div>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button onclick="toggleAll(true)">Alles</button>
+            <button onclick="toggleAll(false)">Niets</button>
+        </div>
+        <p class="hint-text">Duid minstens 4 woorden aan om te kunnen starten.</p>
+        <div style="text-align:center; margin-top:20px">
+            <button id="btn-start-games" onclick="startGameSession()" style="background:var(--success); color:white; width:80%;" disabled>Start</button>
+        </div>
+    </div>
+
+    <div id="score-counter">Vraag 1 / 7</div>
+    <div id="game-area"></div>
+    <div id="feedback"></div>
+</main>
+
+<footer>CC BY-NC-SA 4.0 NicoKlas/Arasaac</footer>
+
+<script>
+const rawVocab = [
+    { nl: "ja", fr: "oui" },
+    { nl: "nee", fr: "non" },
+    { nl: "hallo / goedendag", fr: "bonjour" },
+    { nl: "hoi", fr: "salut" },
+    { nl: "bedankt", fr: "merci" },
+    { nl: "alstublieft", fr: "s'il vous plaît" },
+    { nl: "hoe gaat het?", fr: "ça va ?" },
+    { nl: "goed", fr: "bien" },
+    { nl: "tot ziens", fr: "au revoir" },
+    { nl: "excuses", fr: "pardon" }
+];
+
+const positiveFeedbacks = ["Goed zo! 🌟", "Knap gedaan! 🏆", "Fantastisch! ✨", "Schitterend! 🔥", "Top gewerkt! 💪"];
+
+let fullData = [], activeData = [], modeQueue = [], testData = [];
+let mode = 'list', testIndex = 0, testScore = 0, testActive = false;
+let selectedDragItem = null; 
+let activeTimer = null;
+
+async function init() {
+    const promises = rawVocab.map(async (item) => {
+        try {
+            // Zoekterm opschonen voor API (verwijder vraagtekens)
+            const searchTerm = item.fr.replace(/\?/g, "").trim();
+            const res = await fetch(`https://api.arasaac.org/api/pictograms/fr/search/${searchTerm}`);
+            const json = await res.json();
+            const id = json[0]?._id;
+            return { ...item, img: `https://static.arasaac.org/pictograms/${id}/${id}_300.png`, selected: false };
+        } catch (e) { return { ...item, img: "", selected: false }; }
+    });
+    fullData = await Promise.all(promises);
+    document.getElementById('loading-msg').style.display = 'none';
+    renderSelectionGrid();
+}
+
+function speak(t) { 
+    window.speechSynthesis.cancel(); 
+    const u = new SpeechSynthesisUtterance(t); 
+    u.lang = 'fr-FR'; u.rate = 0.9;
+    window.speechSynthesis.speak(u); 
+}
+
+function renderSelectionGrid() {
+    const grid = document.getElementById('sel-grid');
+    grid.innerHTML = fullData.map((item, idx) => `
+        <div class="selection-card ${item.selected ? 'selected' : ''}" onclick="toggleWord(${idx})">
+            <img src="${item.img}">
+            <div><b>${item.fr}</b></div>
+        </div>
+    `).join('');
+    checkSelectionCount();
+}
+
+function toggleWord(idx) {
+    fullData[idx].selected = !fullData[idx].selected;
+    renderSelectionGrid();
+}
+
+function toggleAll(status) {
+    fullData.forEach(item => item.selected = status);
+    renderSelectionGrid();
+}
+
+function checkSelectionCount() {
+    activeData = fullData.filter(item => item.selected);
+    const btn = document.getElementById('btn-start-games');
+    btn.disabled = activeData.length < 4;
+}
+
+function startGameSession() {
+    document.getElementById('selection-screen').style.display = 'none';
+    document.getElementById('app-nav').style.display = 'flex';
+    document.getElementById('game-area').style.display = 'block';
+    changeMode('list');
+}
+
+function goToSelection() { location.reload(); }
+
+function clearTimers() {
+    if(activeTimer) {
+        clearTimeout(activeTimer);
+        activeTimer = null;
+    }
+}
+
+function changeMode(m) {
+    clearTimers();
+    testActive = false; mode = m; modeQueue = [];
+    document.getElementById('score-counter').style.display = 'none';
+    document.getElementById('feedback').innerText = "";
+    document.querySelectorAll('#app-nav button').forEach(b => b.classList.remove('active'));
+    if(document.getElementById(`nav-${m}`)) document.getElementById(`nav-${m}`).classList.add('active');
+    renderGame();
+}
+
+function getNextItem() {
+    if (modeQueue.length === 0) modeQueue = [...activeData].sort(() => 0.5 - Math.random());
+    return modeQueue.pop();
+}
+
+function renderGame(testItem = null) {
+    const area = document.getElementById('game-area');
+    const item = testItem || getNextItem();
+    selectedDragItem = null;
+    document.getElementById('feedback').innerText = ""; 
+
+    if (mode === 'list') {
+        area.innerHTML = `
+            <div class="vocab-list">
+                ${activeData.map(i => `
+                    <div class="vocab-row">
+                        <img src="${i.img}">
+                        <div style="flex:1"><b>${i.fr}</b><br><small>${i.nl}</small></div>
+                        <button class="speaker-btn" onclick="speak('${i.fr.replace(/'/g, "\\'")}')">🔊</button>
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+    else if (mode === 'listen' || mode === 'copy') {
+        const isCopyMode = mode === 'copy';
+        area.innerHTML = `<div style="text-align:center">
+            <div class="fr-display">${item.fr} <button class="speaker-btn" onclick="speak('${item.fr.replace(/'/g, "\\'")}')">🔊</button></div>
+            <img src="${item.img}" class="arasaac-img">
+            ${isCopyMode ? `
+                <input type="text" id="ipt" placeholder="Typ het na..." autocomplete="off" autocapitalize="none">
+                <button onclick="checkCopy('${item.fr.replace(/'/g, "\\'")}')" style="width:100%">Controleer</button>
+            ` : `
+                <h3>${item.nl}</h3>
+                <button onclick="renderGame()" style="margin-top:20px; width:100%">Volgende</button>
+            `}
+        </div>`;
+        speak(item.fr);
+        if(isCopyMode) {
+            const ipt = document.getElementById('ipt');
+            ipt.focus();
+            ipt.onkeydown = (e) => { if(e.key==='Enter') { ipt.blur(); checkCopy(item.fr); }};
+        }
+    } 
+    else if (mode === 'translate') {
+        const options = [...activeData.filter(d => d.nl !== item.nl).sort(() => 0.5 - Math.random()).slice(0, 3), item].sort(() => 0.5 - Math.random());
+        area.innerHTML = `<div style="text-align:center">
+            <div class="fr-display">${item.fr} <button class="speaker-btn" onclick="speak('${item.fr.replace(/'/g, "\\'")}')">🔊</button></div>
+            <img src="${item.img}" class="arasaac-img" style="${testActive ? 'display:none' : ''}">
+            <div class="option-grid">${options.map(s => `<button onclick="checkTrans('${s.nl.replace(/'/g, "\\'")}', '${item.nl.replace(/'/g, "\\'")}')">${s.nl}</button>`).join('')}</div>
+        </div>`;
+        speak(item.fr);
+    }
+    else if (mode === 'drag') { renderDragArea(4); }
+    else if (mode === 'memory') { startMem(4); }
+}
+
+function renderDragArea(count) {
+    const area = document.getElementById('game-area');
+    const subsetCount = Math.min(count, activeData.length);
+    const subset = [...activeData].sort(() => 0.5 - Math.random()).slice(0, subsetCount);
+    const shuffledTargets = [...subset].sort(() => 0.5 - Math.random());
+    let matchesMade = 0;
+    let testResults = [];
+
+    area.innerHTML = `<h3 style="text-align:center; margin-bottom:20px;">Verbind</h3>
+        <div id="drags" style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;"></div>
+        <div id="drops" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;"></div>`;
+    
+    subset.forEach((i, idx) => {
+        const img = document.createElement('img');
+        img.src = i.img; img.className = 'drag-img'; img.id = `drag-item-${idx}`;
+        img.onclick = () => {
+            document.querySelectorAll('.drag-img').forEach(el => el.classList.remove('selected-for-drop'));
+            img.classList.add('selected-for-drop');
+            selectedDragItem = { data: i, elId: img.id };
+        };
+        document.getElementById('drags').appendChild(img);
+    });
+
+    shuffledTargets.forEach(target => {
+        const dz = document.createElement('div');
+        dz.className = 'drop-zone';
+        dz.innerHTML = `<b>${target.fr}</b>`;
+        dz.onclick = () => {
+            if(!selectedDragItem) return;
+            const source = selectedDragItem;
+            
+            if(testActive) {
+                dz.innerHTML = `<img src="${source.data.img}" style="width:60px">`;
+                dz.classList.add('filled');
+                testResults.push({ zone: dz, isCorrect: source.data.fr === target.fr });
+                document.getElementById(source.elId).style.visibility = 'hidden';
+                selectedDragItem = null;
+                matchesMade++;
+                
+                if(matchesMade === subsetCount) {
+                    testResults.forEach(res => {
+                        if(res.isCorrect) { res.zone.classList.add('correct'); testScore++; }
+                        else { res.zone.classList.add('wrong'); }
+                    });
+                    activeTimer = setTimeout(() => { nextTest(); }, 2500);
+                }
+            } else {
+                if(source.data.fr === target.fr) {
+                    dz.innerHTML = `<img src="${source.data.img}" style="width:60px">`;
+                    dz.classList.add('correct');
+                    speak(target.fr);
+                    document.getElementById(source.elId).style.visibility = 'hidden';
+                    selectedDragItem = null;
+                    matchesMade++;
+                    if(matchesMade === subsetCount) activeTimer = setTimeout(() => feedback(true), 1500);
+                } else {
+                    dz.classList.add('wrong');
+                    setTimeout(() => dz.classList.remove('wrong'), 500);
+                    document.getElementById(source.elId).classList.remove('selected-for-drop');
+                    selectedDragItem = null;
+                }
+            }
+        };
+        document.getElementById('drops').appendChild(dz);
+    });
+}
+
+function startMem(pairs) {
+    const area = document.getElementById('game-area');
+    area.innerHTML = `<div class="grid-mem" id="m-grid"></div>`;
+    const pairCount = Math.min(pairs, activeData.length);
+    const subset = [...activeData].sort(() => 0.5 - Math.random()).slice(0, pairCount);
+    let deck = [];
+    subset.forEach(i => { deck.push({...i, type:'img'}); deck.push({...i, type:'txt'}); });
+    deck.sort(() => 0.5 - Math.random());
+    
+    let flipped = [], matches = 0;
+    deck.forEach(card => {
+        const el = document.createElement('div'); el.className = 'card';
+        el.innerHTML = `<div class="card-inner"><div class="face front">?</div><div class="face back">${card.type==='img'?`<img src="${card.img}">`:`<span>${card.fr}</span>`}</div></div>`;
+        el.onclick = () => {
+            if(el.classList.contains('flipped') || flipped.length === 2) return;
+            el.classList.add('flipped');
+            speak(card.fr);
+            flipped.push({el, data:card});
+            if(flipped.length === 2) {
+                if(flipped[0].data.fr === flipped[1].data.fr) {
+                    matches++; flipped = [];
+                    if(matches === pairCount) activeTimer = setTimeout(() => renderGame(), 1500);
+                } else {
+                    activeTimer = setTimeout(() => { flipped.forEach(c=>c.el.classList.remove('flipped')); flipped=[]; }, 1000);
+                }
+            }
+        };
+        document.getElementById('m-grid').appendChild(el);
+    });
+}
+
+function checkCopy(goal) {
+    const val = document.getElementById('ipt').value.trim().toLowerCase();
+    const isCorrect = val === goal.toLowerCase();
+    if(isCorrect && testActive) testScore++;
+    feedback(isCorrect, goal);
+}
+
+function checkTrans(val, goal) {
+    const isCorrect = val === goal;
+    if(isCorrect && testActive) testScore++;
+    feedback(isCorrect, goal);
+}
+
+function feedback(correct, goal) {
+    const f = document.getElementById('feedback');
+    if(correct) {
+        f.innerText = positiveFeedbacks[Math.floor(Math.random() * positiveFeedbacks.length)];
+        f.style.color = "var(--success)";
+    } else {
+        f.innerText = `Foutje! Het was: ${goal}`;
+        f.style.color = "var(--danger)";
+    }
+    activeTimer = setTimeout(() => { 
+        if(testActive) nextTest(); 
+        else renderGame(); 
+    }, 1500);
+}
+
+function startTest() {
+    clearTimers();
+    testActive = true; testIndex = 0; testScore = 0;
+    testData = [...activeData].sort(() => 0.5 - Math.random());
+    document.querySelectorAll('#app-nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-test').classList.add('active');
+    document.getElementById('score-counter').style.display = 'block';
+    document.getElementById('feedback').innerText = ""; 
+    nextTest();
+}
+
+function nextTest() {
+    clearTimers();
+    if(testIndex >= 7) { showResult(); return; }
+    document.getElementById('feedback').innerText = ""; 
+    document.getElementById('score-counter').innerText = `Vraag ${Math.min(testIndex + 1, 7)} / 7`;
+    
+    if(testIndex < 2) { 
+        mode = 'copy';
+        renderGame(testData[testIndex % testData.length]);
+    } else if (testIndex < 6) { 
+        mode = 'translate';
+        renderGame(testData[testIndex % testData.length]);
+    } else { 
+        mode = 'drag';
+        renderDragArea(4);
+        testIndex = 6; 
+    }
+    testIndex++;
+}
+
+function showResult() {
+    document.getElementById('score-counter').style.display = 'none';
+    document.getElementById('feedback').innerText = "";
+    
+    let endMsg = "Nog even oefenen!";
+    if(testScore >= 10) endMsg = "Perfect! Je bent een expert! 🥇";
+    else if(testScore >= 8) endMsg = "Schitterend gedaan! 🌟";
+    else if(testScore >= 5) endMsg = "Goed gewerkt, ga zo door! 👍";
+
+    document.getElementById('game-area').innerHTML = `
+        <div style="text-align:center">
+            <h2 style="margin-bottom:20px">Toets voltooid</h2>
+            <div style="font-size:5rem; font-weight:bold; color:var(--warning); margin:20px 0;">${testScore} / 10</div>
+            <p style="font-size:1.2rem">${endMsg}</p>
+        </div>`;
+}
+
+init();
+</script>
+</body>
+</html>
